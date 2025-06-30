@@ -53,6 +53,7 @@ with app.app_context():
     from multilang_support import MultiLanguageProcessor
     from external_knowledge import ExternalKnowledgeConnector
     from collaborative_editor import CollaborativeEditor
+    from hindi_content_extractor import HindiContentExtractor
     
     # Initialize processors with fallback handling
     try:
@@ -66,5 +67,6 @@ with app.app_context():
     app.multilang_processor = MultiLanguageProcessor()
     app.external_knowledge = ExternalKnowledgeConnector()
     app.collaborative_editor = CollaborativeEditor(socketio)
+    app.hindi_extractor = HindiContentExtractor()
     
     logging.info("Advanced Q&A system initialized with all features")

@@ -67,18 +67,63 @@ def ask_question():
                     'category_id': item.category.id
                 })
             
-            # Use advanced transformer NLP if available
-            if hasattr(app, 'transformer_nlp') and app.transformer_nlp:
-                try:
-                    matches = app.transformer_nlp.rank_answers(normalized_question, content_data)
-                except Exception as e:
-                    logging.warning(f"Transformer NLP failed, falling back: {e}")
+            # Check if question is in Hindi and use specialized extraction
+            detected_lang = app.multilang_processor.detect_language(question_text)
+            use_hindi_extractor = detected_lang in ['hi', 'hindi'] or any(
+                char in question_text for char in 'कखगघचछजझटठडढतथदधनपफबभमयरलवशषसहा'
+            )
+            
+            matches = []
+            
+            if use_hindi_extractor and hasattr(app, 'hindi_extractor'):
+                # Use Hindi content extractor for paragraph-level extraction
+                for content_item in content_data:
+                    relevant_paragraphs = app.hindi_extractor.extract_relevant_paragraphs(
+                        question_text, content_item['content'], max_paragraphs=3
+                    )
+                    
+                    if relevant_paragraphs:
+                        # Format the extracted paragraphs into a comprehensive answer
+                        formatted_answer = app.hindi_extractor.format_answer_with_paragraphs(
+                            relevant_paragraphs, question_text
+                        )
+                        
+                        # Create modified content item with extracted relevant content
+                        modified_item = content_item.copy()
+                        modified_item['content'] = formatted_answer['answer']
+                        modified_item['original_content'] = content_item['content']
+                        modified_item['extracted_paragraphs'] = len(relevant_paragraphs)
+                        modified_item['total_words'] = formatted_answer['total_words']
+                        
+                        matches.append((modified_item, formatted_answer['confidence']))
+                
+                # Sort by confidence
+                matches.sort(key=lambda x: x[1], reverse=True)
+                matches = matches[:5]  # Take top 5
+            
+            # Use advanced transformer NLP if Hindi extractor didn't find enough or as fallback
+            if len(matches) < 2:
+                if hasattr(app, 'transformer_nlp') and app.transformer_nlp:
+                    try:
+                        transformer_matches = app.transformer_nlp.rank_answers(normalized_question, content_data)
+                        # Avoid duplicates if we already have Hindi extracted content
+                        for match in transformer_matches:
+                            if not any(existing[0]['id'] == match[0]['id'] for existing in matches):
+                                matches.append(match)
+                    except Exception as e:
+                        logging.warning(f"Transformer NLP failed, falling back: {e}")
+                        nlp_processor.build_content_index(content_data)
+                        traditional_matches = nlp_processor.find_best_answers(normalized_question, top_k=5)
+                        for match in traditional_matches:
+                            if not any(existing[0]['id'] == match[0]['id'] for existing in matches):
+                                matches.append(match)
+                else:
+                    # Fallback to basic NLP
                     nlp_processor.build_content_index(content_data)
-                    matches = nlp_processor.find_best_answers(normalized_question, top_k=5)
-            else:
-                # Fallback to basic NLP
-                nlp_processor.build_content_index(content_data)
-                matches = nlp_processor.find_best_answers(normalized_question, top_k=5)
+                    traditional_matches = nlp_processor.find_best_answers(normalized_question, top_k=5)
+                    for match in traditional_matches:
+                        if not any(existing[0]['id'] == match[0]['id'] for existing in matches):
+                            matches.append(match)
             
             # Enhance with external knowledge
             if hasattr(app, 'external_knowledge'):

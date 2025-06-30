@@ -176,7 +176,23 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-text">{{ answer.content }}</p>
+                        <!-- Language and extraction indicators -->
+                        {% if answer.extracted_paragraphs %}
+                        <div class="extraction-info">
+                            <i data-feather="scissors" width="16" height="16" class="me-1"></i>
+                            Extracted {{ answer.extracted_paragraphs }} relevant paragraphs
+                            <span class="word-count-badge">{{ answer.total_words }} words</span>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Content with Hindi support -->
+                        <div class="text-container">
+                            {% if answer.content.count('।') > 2 or answer.content | regex_search('[कखगघचछजझटठडढतथदधनपफबभमयरलवशषसहा]') %}
+                                <div class="content-text hindi-content">{{ answer.content }}</div>
+                            {% else %}
+                                <div class="content-text">{{ answer.content }}</div>
+                            {% endif %}
+                        </div>
                         
                         {% if answer.url %}
                             <div class="mt-2">

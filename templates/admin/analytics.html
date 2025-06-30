@@ -94,7 +94,7 @@
 {% block extra_scripts %}
 <script>
 // Question Trends Chart
-const trendsData = {{ trends.daily_counts | tojsonfilter | safe }};
+const trendsData = {{ trends.daily_counts | tojson | safe }};
 const trendsLabels = trendsData.map(item => item.date);
 const trendsValues = trendsData.map(item => item.count);
 
@@ -132,7 +132,7 @@ new Chart(trendsCtx, {
 });
 
 // Category Distribution Chart
-const categoryData = {{ trends.category_distribution | tojsonfilter | safe }};
+const categoryData = {{ trends.category_distribution | tojson | safe }};
 const categoryLabels = categoryData.map(item => item.name);
 const categoryValues = categoryData.map(item => item.count);
 
@@ -167,7 +167,7 @@ if (categoryData.length > 0) {
 }
 
 // Confidence Score Distribution Chart
-const confidenceData = {{ trends.confidence_distribution | tojsonfilter | safe }};
+const confidenceData = {{ trends.confidence_distribution | tojson | safe }};
 const confidenceLabels = confidenceData.map(item => item.label);
 const confidenceValues = confidenceData.map(item => item.count);
 

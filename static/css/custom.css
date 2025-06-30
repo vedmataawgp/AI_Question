@@ -293,3 +293,254 @@ footer {
 .border-start-danger {
     border-left: 4px solid var(--bs-danger) !important;
 }
+
+/* Hindi Content Support and Text Fitting Improvements */
+:root {
+    --hindi-font: 'Noto Sans Devanagari', 'Mangal', 'Sanskrit Text', system-ui, sans-serif;
+    --content-max-width: 100%;
+    --paragraph-spacing: 1.2rem;
+}
+
+/* Typography improvements for multi-language support */
+.hindi-content, .content-hindi {
+    font-family: var(--hindi-font);
+    font-size: 1.1rem;
+    line-height: 1.8;
+    word-spacing: 0.1rem;
+    text-align: justify;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+/* Improved text containers for better fitting */
+.text-container {
+    max-width: var(--content-max-width);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    -ms-hyphens: auto;
+}
+
+/* Enhanced text content handling */
+.content-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    text-align: justify;
+    margin-bottom: var(--paragraph-spacing);
+}
+
+.content-paragraph {
+    margin-bottom: var(--paragraph-spacing);
+    padding: 0.75rem;
+    border-left: 3px solid var(--bs-primary);
+    background-color: rgba(13, 110, 253, 0.05);
+    border-radius: 0.25rem;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.content-paragraph:last-child {
+    margin-bottom: 0;
+}
+
+/* Question text area improvements */
+.form-control {
+    font-family: var(--hindi-font);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.question-textarea {
+    min-height: 120px;
+    resize: vertical;
+    font-family: var(--hindi-font);
+    white-space: pre-wrap;
+}
+
+/* Answer confidence indicators with better text handling */
+.answer-card {
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.answer-confidence-high {
+    border-left: 4px solid var(--bs-success);
+    background: linear-gradient(90deg, rgba(25, 135, 84, 0.1) 0%, transparent 100%);
+}
+
+.answer-confidence-medium {
+    border-left: 4px solid var(--bs-warning);
+    background: linear-gradient(90deg, rgba(255, 193, 7, 0.1) 0%, transparent 100%);
+}
+
+.answer-confidence-low {
+    border-left: 4px solid var(--bs-danger);
+    background: linear-gradient(90deg, rgba(220, 53, 69, 0.1) 0%, transparent 100%);
+}
+
+/* Extracted paragraphs styling */
+.extracted-paragraph {
+    background-color: rgba(13, 110, 253, 0.08);
+    border: 1px solid rgba(13, 110, 253, 0.2);
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.extracted-paragraph::before {
+    content: counter(paragraph-counter);
+    counter-increment: paragraph-counter;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background-color: var(--bs-primary);
+    color: white;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.paragraph-container {
+    counter-reset: paragraph-counter;
+}
+
+/* Language detection indicator */
+.language-indicator {
+    font-size: 0.8rem;
+    color: var(--bs-info);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+/* Content extraction indicators */
+.extraction-info {
+    background-color: rgba(13, 110, 253, 0.1);
+    border: 1px solid rgba(13, 110, 253, 0.3);
+    border-radius: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    color: var(--bs-info);
+}
+
+.word-count-badge {
+    background-color: var(--bs-secondary);
+    color: white;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+    margin-left: 0.5rem;
+}
+
+/* Table improvements for better text fitting */
+.table td, .table th {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 200px;
+}
+
+/* Responsive text scaling */
+@media (max-width: 768px) {
+    .hindi-content, .content-hindi {
+        font-size: 1rem;
+        line-height: 1.7;
+    }
+    
+    .content-paragraph {
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .card-body {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .hindi-content, .content-hindi {
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    
+    .question-textarea {
+        min-height: 100px;
+    }
+}
+
+/* Print styles for better output */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .content-text, .content-paragraph {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    .hindi-content, .content-hindi {
+        font-size: 12pt;
+        line-height: 1.6;
+    }
+}
+
+/* Dark theme specific text adjustments */
+[data-bs-theme="dark"] .content-paragraph {
+    background-color: rgba(13, 110, 253, 0.15);
+    border-color: rgba(13, 110, 253, 0.4);
+}
+
+[data-bs-theme="dark"] .extracted-paragraph {
+    background-color: rgba(13, 110, 253, 0.12);
+    border-color: rgba(13, 110, 253, 0.3);
+}
+
+[data-bs-theme="dark"] .extraction-info {
+    background-color: rgba(13, 110, 253, 0.15);
+    border-color: rgba(13, 110, 253, 0.4);
+}
+
+/* Scrollbar styling for better text viewing */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bs-gray-100);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--bs-gray-400);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-gray-500);
+}
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bs-gray-800);
+}
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--bs-gray-600);
+}
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-gray-500);
+}

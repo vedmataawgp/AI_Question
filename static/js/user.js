@@ -665,3 +665,65 @@ window.addEventListener('load', function() {
         }
     }
 });
+
+// Enhanced functions for Hindi content display and extraction support
+function showFullContent(index) {
+    var fullContentDiv = document.getElementById('fullContent' + index);
+    if (fullContentDiv) {
+        fullContentDiv.style.display = 'block';
+        fullContentDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function hideFullContent(index) {
+    var fullContentDiv = document.getElementById('fullContent' + index);
+    if (fullContentDiv) {
+        fullContentDiv.style.display = 'none';
+    }
+}
+
+// Auto-detect Hindi content and apply appropriate styling
+function applyHindiStyling() {
+    document.querySelectorAll('.content-text').forEach(function(element) {
+        var text = element.textContent || element.innerText;
+        if (text.match(/[कखगघचछजझटठडढतथदधनपफबभमयरलवशषसहा]/)) {
+            element.classList.add('hindi-content');
+        }
+    });
+}
+
+// Enhanced question suggestions for Hindi
+function getHindiQuestionSuggestions() {
+    return [
+        "यह कैसे काम करता है?",
+        "इसका उपयोग कैसे करें?",
+        "मुझे इसकी जानकारी चाहिए।",
+        "यह क्या है और कैसे उपयोग करें?",
+        "इसके फायदे क्या हैं?",
+        "कदम-दर-कदम गाइड दें।"
+    ];
+}
+
+// Enhanced copy function with better feedback
+function copyAnswerText(content, type) {
+    copyToClipboard(content);
+    var message = type === 'paragraph' ? 'Paragraph copied!' : 
+                  type === 'full' ? 'Full content copied!' : 'Content copied!';
+    showUserMessage(message, 'success');
+}
+
+// Initialize enhanced features when document loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Apply Hindi styling to existing content
+    setTimeout(applyHindiStyling, 100);
+    
+    // Add copy functionality to extracted paragraphs
+    document.querySelectorAll('.extracted-paragraph').forEach(function(para) {
+        para.addEventListener('click', function() {
+            var text = this.textContent.trim();
+            copyAnswerText(text, 'paragraph');
+        });
+        para.setAttribute('title', 'Click to copy this paragraph');
+        para.style.cursor = 'pointer';
+    });
+});
