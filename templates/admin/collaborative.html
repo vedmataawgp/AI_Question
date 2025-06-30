@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+
+{% block title %}Collaborative Editing - Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>
+                    <i data-feather="users" class="me-2"></i>
+                    Collaborative Editing
+                </h1>
+                <p class="text-muted mb-0">Manage real-time collaborative content editing sessions</p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                    <i data-feather="arrow-left" class="me-2"></i>
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h2 text-primary mb-1">{{ active_sessions }}</div>
+                <div class="text-muted">Active Sessions</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h2 text-success mb-1">{{ total_users }}</div>
+                <div class="text-muted">Active Users</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h2 text-info mb-1" id="totalContent">0</div>
+                <div class="text-muted">Content Items</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="h2 text-warning mb-1" id="recentEdits">0</div>
+                <div class="text-muted">Recent Edits</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Active Sessions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="activity" class="me-2"></i>
+                    Active Editing Sessions
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshSessions()">
+                    <i data-feather="refresh-cw" class="me-1"></i>
+                    Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="activeSessions">
+                    <div class="text-center text-muted py-4">
+                        <i data-feather="loader" class="me-2"></i>
+                        Loading active sessions...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Content Management with Collaborative Features -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="file-text" class="me-2"></i>
+                    Content Items - Collaborative Ready
+                </h5>
+                <div>
+                    <button class="btn btn-sm btn-outline-success" onclick="enableCollaborativeMode()">
+                        <i data-feather="users" class="me-1"></i>
+                        Enable Collaborative Mode
+                    </button>
+                    <a href="{{ url_for('admin_content') }}" class="btn btn-sm btn-primary">
+                        <i data-feather="plus" class="me-1"></i>
+                        Add Content
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="contentTable">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Last Modified</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contentTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i data-feather="loader" class="me-2"></i>
+                                    Loading content...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Collaborative Settings Modal -->
+<div class="modal fade" id="collaborativeSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i data-feather="settings" class="me-2"></i>
+                    Collaborative Settings
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Session Timeout (hours)</label>
+                    <input type="number" class="form-control" id="sessionTimeout" value="24" min="1" max="168">
+                    <div class="form-text">Inactive sessions will be cleaned up after this time</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Max Users per Session</label>
+                    <input type="number" class="form-control" id="maxUsers" value="10" min="1" max="50">
+                    <div class="form-text">Maximum number of users allowed in a single editing session</div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="autoSave" checked>
+                        <label class="form-check-label" for="autoSave">
+                            Auto-save changes every 30 seconds
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="conflictResolution" checked>
+                        <label class="form-check-label" for="conflictResolution">
+                            Enable operational transformation for conflict resolution
+                        </label>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="versionHistory" checked>
+                        <label class="form-check-label" for="versionHistory">
+                            Maintain edit history and versions
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveCollaborativeSettings()">
+                    <i data-feather="save" class="me-1"></i>
+                    Save Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Session Details Modal -->
+<div class="modal fade" id="sessionDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i data-feather="info" class="me-2"></i>
+                    Session Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="sessionDetailsContent">
+                <!-- Session details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" onclick="terminateSession()">
+                    <i data-feather="x-circle" class="me-1"></i>
+                    Terminate Session
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Collaborative editing management
+let currentSessionId = null;
+let refreshInterval = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadContentItems();
+    loadActiveSessions();
+    startAutoRefresh();
+    
+    feather.replace();
+});
+
+function loadContentItems() {
+    fetch('/api/content')
+        .then(response => response.json())
+        .then(data => {
+            displayContentItems(data.content || []);
+            document.getElementById('totalContent').textContent = data.content ? data.content.length : 0;
+        })
+        .catch(error => {
+            console.error('Failed to load content:', error);
+            document.getElementById('contentTableBody').innerHTML = 
+                '<tr><td colspan="5" class="text-center text-danger">Failed to load content</td></tr>';
+        });
+}
+
+function displayContentItems(content) {
+    const tbody = document.getElementById('contentTableBody');
+    
+    if (content.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No content items found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = content.map(item => `
+        <tr>
+            <td>
+                <div class="fw-medium">${item.title}</div>
+                <small class="text-muted">${item.content.substring(0, 100)}${item.content.length > 100 ? '...' : ''}</small>
+            </td>
+            <td>
+                <span class="badge bg-secondary">${item.category}</span>
+            </td>
+            <td>
+                <small class="text-muted">${formatDateTime(item.updated_at || item.created_at)}</small>
+            </td>
+            <td>
+                <span class="badge bg-success" id="status-${item.id}">Available</span>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm">
+                    <a href="/admin/content/edit/${item.id}" class="btn btn-outline-primary">
+                        <i data-feather="edit" width="14" height="14"></i>
+                    </a>
+                    <a href="/admin/content/edit/${item.id}/collaborative" class="btn btn-outline-success" title="Collaborative Edit">
+                        <i data-feather="users" width="14" height="14"></i>
+                    </a>
+                    <button class="btn btn-outline-info" onclick="viewSessionInfo(${item.id})" title="Session Info">
+                        <i data-feather="info" width="14" height="14"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    
+    feather.replace();
+}
+
+function loadActiveSessions() {
+    fetch('/api/collaborative/sessions')
+        .then(response => response.json())
+        .then(data => {
+            displayActiveSessions(data.sessions || []);
+        })
+        .catch(error => {
+            console.error('Failed to load sessions:', error);
+            document.getElementById('activeSessions').innerHTML = 
+                '<div class="text-center text-danger">Failed to load active sessions</div>';
+        });
+}
+
+function displayActiveSessions(sessions) {
+    const container = document.getElementById('activeSessions');
+    
+    if (sessions.length === 0) {
+        container.innerHTML = '<div class="text-center text-muted py-4">No active collaborative sessions</div>';
+        return;
+    }
+    
+    container.innerHTML = sessions.map(session => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h6 class="card-title mb-1">${session.content_title || 'Content #' + session.content_id}</h6>
+                        <small class="text-muted">Session ID: ${session.content_id}</small>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="h5 text-primary mb-1">${session.active_users}</div>
+                            <small class="text-muted">Active Users</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button class="btn btn-sm btn-outline-primary me-2" onclick="viewSessionDetails('${session.content_id}')">
+                            <i data-feather="eye" width="14" height="14" class="me-1"></i>
+                            View Details
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="terminateSession('${session.content_id}')">
+                            <i data-feather="x" width="14" height="14"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i data-feather="clock" width="14" height="14" class="me-1"></i>
+                        Started: ${formatDateTime(session.created_at)}
+                    </small>
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    feather.replace();
+}
+
+function viewSessionDetails(contentId) {
+    currentSessionId = contentId;
+    
+    fetch(`/api/collaborative/session/${contentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showToast('Session not found', 'error');
+                return;
+            }
+            
+            displaySessionDetails(data);
+            const modal = new bootstrap.Modal(document.getElementById('sessionDetailsModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Failed to load session details:', error);
+            showToast('Failed to load session details', 'error');
+        });
+}
+
+function displaySessionDetails(session) {
+    const content = document.getElementById('sessionDetailsContent');
+    
+    const usersHtml = Object.entries(session.users || {}).map(([userId, user]) => 
+        `<div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <div>
+                <strong>${user.name}</strong>
+                <br><small class="text-muted">Joined: ${formatDateTime(user.joined_at)}</small>
+            </div>
+            <span class="badge ${user.is_active ? 'bg-success' : 'bg-secondary'}">
+                ${user.is_active ? 'Active' : 'Inactive'}
+            </span>
+        </div>`
+    ).join('');
+    
+    content.innerHTML = `
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Session Information</h6>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Content ID:</strong></td>
+                        <td>${session.content_id}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Version:</strong></td>
+                        <td>${session.version}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Active Users:</strong></td>
+                        <td>${session.active_users}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Locked Sections:</strong></td>
+                        <td>${session.locked_sections}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Created:</strong></td>
+                        <td>${formatDateTime(session.created_at)}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6>Active Users</h6>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    ${usersHtml || '<div class="text-muted">No active users</div>'}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function terminateSession(contentId = null) {
+    const sessionId = contentId || currentSessionId;
+    if (!sessionId) return;
+    
+    if (!confirm('Are you sure you want to terminate this collaborative session? All users will be disconnected.')) {
+        return;
+    }
+    
+    fetch(`/api/collaborative/terminate/${sessionId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Session terminated successfully', 'success');
+            loadActiveSessions();
+            
+            // Close modal if open
+            const modal = bootstrap.Modal.getInstance(document.getElementById('sessionDetailsModal'));
+            if (modal) modal.hide();
+        } else {
+            showToast('Failed to terminate session', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Failed to terminate session:', error);
+        showToast('Failed to terminate session', 'error');
+    });
+}
+
+function enableCollaborativeMode() {
+    const modal = new bootstrap.Modal(document.getElementById('collaborativeSettingsModal'));
+    modal.show();
+}
+
+function saveCollaborativeSettings() {
+    const settings = {
+        session_timeout: document.getElementById('sessionTimeout').value,
+        max_users: document.getElementById('maxUsers').value,
+        auto_save: document.getElementById('autoSave').checked,
+        conflict_resolution: document.getElementById('conflictResolution').checked,
+        version_history: document.getElementById('versionHistory').checked
+    };
+    
+    fetch('/api/collaborative/settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Settings saved successfully', 'success');
+            const modal = bootstrap.Modal.getInstance(document.getElementById('collaborativeSettingsModal'));
+            modal.hide();
+        } else {
+            showToast('Failed to save settings', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Failed to save settings:', error);
+        showToast('Failed to save settings', 'error');
+    });
+}
+
+function refreshSessions() {
+    loadActiveSessions();
+    loadContentItems();
+    showToast('Data refreshed', 'info');
+}
+
+function startAutoRefresh() {
+    // Refresh every 30 seconds
+    refreshInterval = setInterval(() => {
+        loadActiveSessions();
+    }, 30000);
+}
+
+function viewSessionInfo(contentId) {
+    fetch(`/api/collaborative/session/${contentId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                showToast('No active session for this content', 'info');
+            } else {
+                viewSessionDetails(contentId);
+            }
+        })
+        .catch(error => {
+            console.error('Failed to load session info:', error);
+            showToast('Failed to load session info', 'error');
+        });
+}
+
+function formatDateTime(timestamp) {
+    if (!timestamp) return 'N/A';
+    return new Date(timestamp).toLocaleString();
+}
+
+function showToast(message, type) {
+    // Simple toast notification
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Q&A System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i data-feather="trending-up" class="me-2"></i>
+            Analytics Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="activity" class="me-2"></i>
+                    Question Trends (Last 30 Days)
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="questionTrendsChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="pie-chart" class="me-2"></i>
+                    Category Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="bar-chart-2" class="me-2"></i>
+                    Confidence Score Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="confidenceChart" height="150"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="list" class="me-2"></i>
+                    Recent Questions
+                </h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                {% if recent_questions %}
+                    {% for question in recent_questions %}
+                        <div class="border-bottom pb-2 mb-2">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <small class="text-muted">{{ question.asked_at[:10] }}</small>
+                                    <p class="mb-1">{{ question.question[:100] }}{% if question.question|length > 100 %}...{% endif %}</p>
+                                    <small class="text-muted">
+                                        Category: <span class="badge bg-secondary">{{ question.category }}</span>
+                                        Confidence: <span class="badge bg-primary">{{ (question.confidence_score * 100)|round(1) }}%</span>
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">No questions asked yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Question Trends Chart
+const trendsData = {{ trends.daily_counts | tojsonfilter | safe }};
+const trendsLabels = trendsData.map(item => item.date);
+const trendsValues = trendsData.map(item => item.count);
+
+const trendsCtx = document.getElementById('questionTrendsChart').getContext('2d');
+new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+        labels: trendsLabels,
+        datasets: [{
+            label: 'Questions Asked',
+            data: trendsValues,
+            borderColor: 'rgb(13, 110, 253)',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            tension: 0.1,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+
+// Category Distribution Chart
+const categoryData = {{ trends.category_distribution | tojsonfilter | safe }};
+const categoryLabels = categoryData.map(item => item.name);
+const categoryValues = categoryData.map(item => item.count);
+
+if (categoryData.length > 0) {
+    const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+    new Chart(categoryCtx, {
+        type: 'doughnut',
+        data: {
+            labels: categoryLabels,
+            datasets: [{
+                data: categoryValues,
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF',
+                    '#FF9F40'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+// Confidence Score Distribution Chart
+const confidenceData = {{ trends.confidence_distribution | tojsonfilter | safe }};
+const confidenceLabels = confidenceData.map(item => item.label);
+const confidenceValues = confidenceData.map(item => item.count);
+
+const confidenceCtx = document.getElementById('confidenceChart').getContext('2d');
+new Chart(confidenceCtx, {
+    type: 'bar',
+    data: {
+        labels: confidenceLabels,
+        datasets: [{
+            label: 'Number of Questions',
+            data: confidenceValues,
+            backgroundColor: [
+                'rgba(220, 53, 69, 0.8)',   // Very Low - Red
+                'rgba(255, 193, 7, 0.8)',   // Low - Yellow
+                'rgba(13, 202, 240, 0.8)',  // Medium - Cyan
+                'rgba(25, 135, 84, 0.8)',   // High - Green
+                'rgba(13, 110, 253, 0.8)'   // Very High - Blue
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    stepSize: 1
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

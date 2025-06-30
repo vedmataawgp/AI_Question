@@ -1,0 +1,619 @@
+{% extends "base.html" %}
+
+{% block title %}Collaborative Edit: {{ content_item.title }} - Q&A System{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+<style>
+.collaborative-editor {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    min-height: 400px;
+    padding: 1rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.user-cursor {
+    position: absolute;
+    width: 2px;
+    height: 1.2em;
+    background-color: #007bff;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.user-cursor::after {
+    content: attr(data-user);
+    position: absolute;
+    top: -20px;
+    left: -5px;
+    background-color: #007bff;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.user-selection {
+    background-color: rgba(0, 123, 255, 0.2);
+    pointer-events: none;
+}
+
+.locked-section {
+    background-color: rgba(255, 193, 7, 0.2);
+    border: 1px solid #ffc107;
+    border-radius: 3px;
+}
+
+.active-users-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.user-badge {
+    display: inline-block;
+    margin: 2px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1>
+                    <i data-feather="users" class="me-2"></i>
+                    Collaborative Edit
+                </h1>
+                <p class="text-muted mb-0">{{ content_item.title }}</p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-success me-2" id="saveBtn">
+                    <i data-feather="save" class="me-2"></i>
+                    Save Changes
+                </button>
+                <a href="{{ url_for('admin_content') }}" class="btn btn-outline-secondary">
+                    <i data-feather="arrow-left" class="me-2"></i>
+                    Back to Content
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-9">
+        <!-- Editor Card -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i data-feather="edit" class="me-2"></i>
+                    Content Editor
+                </h5>
+                <div>
+                    <span class="badge bg-success" id="connectionStatus">
+                        <i data-feather="wifi" width="16" height="16" class="me-1"></i>
+                        Connected
+                    </span>
+                    <span class="badge bg-info ms-2" id="versionBadge">v1</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <!-- Title Editor -->
+                <div class="border-bottom p-3">
+                    <label for="titleEditor" class="form-label">Title</label>
+                    <input type="text" class="form-control" id="titleEditor" value="{{ content_item.title }}">
+                </div>
+                
+                <!-- Content Editor -->
+                <div class="p-3">
+                    <label for="contentEditor" class="form-label">Content</label>
+                    <div class="position-relative">
+                        <textarea class="collaborative-editor form-control" id="contentEditor" 
+                                rows="20">{{ content_item.content }}</textarea>
+                        <div id="cursors"></div>
+                        <div id="selections"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="row">
+                    <div class="col-md-6">
+                        <small class="text-muted">
+                            <i data-feather="clock" width="16" height="16" class="me-1"></i>
+                            Last saved: <span id="lastSaved">Never</span>
+                        </small>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <small class="text-muted">
+                            Characters: <span id="charCount">0</span> | 
+                            Words: <span id="wordCount">0</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <!-- Active Users Card -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i data-feather="users" class="me-2"></i>
+                    Active Users (<span id="userCount">0</span>)
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="activeUsers" class="active-users-list">
+                    <p class="text-muted text-center">No other users online</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit History Card -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i data-feather="clock" class="me-2"></i>
+                    Recent Changes
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="editHistory" class="active-users-list">
+                    <p class="text-muted text-center">No recent changes</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tools Card -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i data-feather="tool" class="me-2"></i>
+                    Editor Tools
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="lockSectionBtn">
+                        <i data-feather="lock" width="16" height="16" class="me-1"></i>
+                        Lock Selection
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="findReplaceBtn">
+                        <i data-feather="search" width="16" height="16" class="me-1"></i>
+                        Find & Replace
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" id="formatTextBtn">
+                        <i data-feather="type" width="16" height="16" class="me-1"></i>
+                        Format Text
+                    </button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" id="exportBtn">
+                        <i data-feather="download" width="16" height="16" class="me-1"></i>
+                        Export Content
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Find & Replace Modal -->
+<div class="modal fade" id="findReplaceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Find & Replace</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="findText" class="form-label">Find</label>
+                    <input type="text" class="form-control" id="findText" placeholder="Enter text to find">
+                </div>
+                <div class="mb-3">
+                    <label for="replaceText" class="form-label">Replace with</label>
+                    <input type="text" class="form-control" id="replaceText" placeholder="Enter replacement text">
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="caseSensitive">
+                    <label class="form-check-label" for="caseSensitive">
+                        Case sensitive
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-outline-primary" id="findNextBtn">Find Next</button>
+                <button type="button" class="btn btn-primary" id="replaceAllBtn">Replace All</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Collaborative editing functionality
+const socket = io();
+const contentId = {{ content_item.id }};
+const userId = generateUserId();
+const userName = prompt('Enter your name for collaborative editing:') || `User_${userId.slice(0, 8)}`;
+
+let currentVersion = 1;
+let activeUsers = {};
+let isConnected = false;
+
+// Initialize collaborative editor
+document.addEventListener('DOMContentLoaded', function() {
+    const contentEditor = document.getElementById('contentEditor');
+    const titleEditor = document.getElementById('titleEditor');
+    
+    // Join editing session
+    socket.emit('join_edit_session', {
+        content_id: contentId,
+        user_id: userId,
+        user_name: userName
+    });
+    
+    // Socket event handlers
+    socket.on('connect', function() {
+        isConnected = true;
+        updateConnectionStatus();
+    });
+    
+    socket.on('disconnect', function() {
+        isConnected = false;
+        updateConnectionStatus();
+    });
+    
+    socket.on('session_state', function(data) {
+        contentEditor.value = data.content;
+        currentVersion = data.version;
+        activeUsers = data.active_users;
+        updateUI();
+    });
+    
+    socket.on('user_joined', function(data) {
+        showNotification(`${data.user_name} joined the session`, 'info');
+        updateActiveUsers();
+    });
+    
+    socket.on('user_left', function(data) {
+        showNotification(`${data.user_name} left the session`, 'info');
+        delete activeUsers[data.user_id];
+        updateActiveUsers();
+    });
+    
+    socket.on('content_updated', function(data) {
+        if (data.user_id !== userId) {
+            applyEdit(data.edit);
+            currentVersion = data.version;
+            updateUI();
+            addToEditHistory(data);
+        }
+    });
+    
+    socket.on('cursor_moved', function(data) {
+        updateUserCursor(data);
+    });
+    
+    socket.on('section_locked', function(data) {
+        showLockedSection(data);
+    });
+    
+    socket.on('section_unlocked', function(data) {
+        removeLockedSection(data.lock_id);
+    });
+    
+    // Editor event handlers
+    contentEditor.addEventListener('input', function(e) {
+        handleContentChange(e);
+        updateStats();
+    });
+    
+    contentEditor.addEventListener('selectionchange', function() {
+        handleSelectionChange();
+    });
+    
+    // Save button
+    document.getElementById('saveBtn').addEventListener('click', function() {
+        saveContent();
+    });
+    
+    // Tool buttons
+    document.getElementById('lockSectionBtn').addEventListener('click', function() {
+        lockSelection();
+    });
+    
+    document.getElementById('findReplaceBtn').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('findReplaceModal'));
+        modal.show();
+    });
+    
+    document.getElementById('formatTextBtn').addEventListener('click', function() {
+        formatSelectedText();
+    });
+    
+    document.getElementById('exportBtn').addEventListener('click', function() {
+        exportContent();
+    });
+    
+    // Find & Replace functionality
+    document.getElementById('replaceAllBtn').addEventListener('click', function() {
+        performReplaceAll();
+    });
+    
+    // Initial UI update
+    updateStats();
+    updateUI();
+});
+
+function generateUserId() {
+    return 'user_' + Math.random().toString(36).substr(2, 16);
+}
+
+function handleContentChange(e) {
+    const contentEditor = e.target;
+    const edit = {
+        type: 'replace',
+        position: contentEditor.selectionStart,
+        length: 0,
+        text: e.data || '',
+        base_version: currentVersion
+    };
+    
+    socket.emit('content_edit', {
+        user_id: userId,
+        content_id: contentId,
+        edit: edit
+    });
+}
+
+function handleSelectionChange() {
+    const contentEditor = document.getElementById('contentEditor');
+    const selection = {
+        start: contentEditor.selectionStart,
+        end: contentEditor.selectionEnd
+    };
+    
+    socket.emit('cursor_update', {
+        user_id: userId,
+        content_id: contentId,
+        cursor_position: contentEditor.selectionStart,
+        selection: selection
+    });
+}
+
+function applyEdit(edit) {
+    const contentEditor = document.getElementById('contentEditor');
+    const currentContent = contentEditor.value;
+    
+    if (edit.type === 'insert') {
+        const newContent = currentContent.slice(0, edit.position) + 
+                          edit.text + 
+                          currentContent.slice(edit.position);
+        contentEditor.value = newContent;
+    } else if (edit.type === 'delete') {
+        const newContent = currentContent.slice(0, edit.position) + 
+                          currentContent.slice(edit.position + edit.length);
+        contentEditor.value = newContent;
+    } else if (edit.type === 'replace') {
+        const newContent = currentContent.slice(0, edit.position) + 
+                          edit.text + 
+                          currentContent.slice(edit.position + edit.length);
+        contentEditor.value = newContent;
+    }
+}
+
+function updateConnectionStatus() {
+    const statusElement = document.getElementById('connectionStatus');
+    if (isConnected) {
+        statusElement.className = 'badge bg-success';
+        statusElement.innerHTML = '<i data-feather="wifi" width="16" height="16" class="me-1"></i>Connected';
+    } else {
+        statusElement.className = 'badge bg-danger';
+        statusElement.innerHTML = '<i data-feather="wifi-off" width="16" height="16" class="me-1"></i>Disconnected';
+    }
+    feather.replace();
+}
+
+function updateActiveUsers() {
+    const container = document.getElementById('activeUsers');
+    const userCount = document.getElementById('userCount');
+    
+    const userList = Object.values(activeUsers);
+    userCount.textContent = userList.length;
+    
+    if (userList.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center">No other users online</p>';
+    } else {
+        container.innerHTML = userList.map(user => 
+            `<div class="user-badge bg-primary text-white">${user.name}</div>`
+        ).join('');
+    }
+}
+
+function updateStats() {
+    const contentEditor = document.getElementById('contentEditor');
+    const content = contentEditor.value;
+    
+    document.getElementById('charCount').textContent = content.length;
+    document.getElementById('wordCount').textContent = content.split(/\s+/).filter(word => word.length > 0).length;
+}
+
+function updateUI() {
+    document.getElementById('versionBadge').textContent = `v${currentVersion}`;
+    updateActiveUsers();
+    updateStats();
+}
+
+function saveContent() {
+    const contentEditor = document.getElementById('contentEditor');
+    const titleEditor = document.getElementById('titleEditor');
+    
+    fetch(`/api/collaborative/save/${contentId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            title: titleEditor.value,
+            content: contentEditor.value
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('lastSaved').textContent = new Date().toLocaleTimeString();
+            showNotification('Content saved successfully', 'success');
+        } else {
+            showNotification('Failed to save content', 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('Error saving content', 'error');
+    });
+}
+
+function lockSelection() {
+    const contentEditor = document.getElementById('contentEditor');
+    const start = contentEditor.selectionStart;
+    const end = contentEditor.selectionEnd;
+    
+    if (start === end) {
+        showNotification('Please select text to lock', 'warning');
+        return;
+    }
+    
+    socket.emit('lock_section', {
+        user_id: userId,
+        content_id: contentId,
+        start: start,
+        end: end
+    });
+}
+
+function formatSelectedText() {
+    const contentEditor = document.getElementById('contentEditor');
+    const start = contentEditor.selectionStart;
+    const end = contentEditor.selectionEnd;
+    const selectedText = contentEditor.value.substring(start, end);
+    
+    if (!selectedText) {
+        showNotification('Please select text to format', 'warning');
+        return;
+    }
+    
+    // Simple formatting options
+    const formatted = selectedText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0)
+        .join('\n');
+    
+    contentEditor.setRangeText(formatted, start, end, 'end');
+    handleContentChange({ target: contentEditor, data: formatted });
+}
+
+function exportContent() {
+    const contentEditor = document.getElementById('contentEditor');
+    const titleEditor = document.getElementById('titleEditor');
+    
+    const content = `# ${titleEditor.value}\n\n${contentEditor.value}`;
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${titleEditor.value.replace(/[^a-z0-9]/gi, '_')}.md`;
+    a.click();
+    
+    URL.revokeObjectURL(url);
+}
+
+function performReplaceAll() {
+    const contentEditor = document.getElementById('contentEditor');
+    const findText = document.getElementById('findText').value;
+    const replaceText = document.getElementById('replaceText').value;
+    const caseSensitive = document.getElementById('caseSensitive').checked;
+    
+    if (!findText) {
+        showNotification('Please enter text to find', 'warning');
+        return;
+    }
+    
+    const flags = caseSensitive ? 'g' : 'gi';
+    const regex = new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+    const newContent = contentEditor.value.replace(regex, replaceText);
+    
+    if (newContent !== contentEditor.value) {
+        contentEditor.value = newContent;
+        handleContentChange({ target: contentEditor, data: newContent });
+        showNotification('Text replaced successfully', 'success');
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('findReplaceModal'));
+        modal.hide();
+    } else {
+        showNotification('No matches found', 'info');
+    }
+}
+
+function addToEditHistory(data) {
+    const container = document.getElementById('editHistory');
+    const timestamp = new Date().toLocaleTimeString();
+    
+    const historyItem = document.createElement('div');
+    historyItem.className = 'border-bottom pb-2 mb-2';
+    historyItem.innerHTML = `
+        <small>
+            <strong>${activeUsers[data.user_id]?.name || 'Unknown'}</strong><br>
+            ${data.edit.type} at ${timestamp}
+        </small>
+    `;
+    
+    container.insertBefore(historyItem, container.firstChild);
+    
+    // Keep only last 10 items
+    while (container.children.length > 10) {
+        container.removeChild(container.lastChild);
+    }
+}
+
+function showNotification(message, type) {
+    // Simple notification system
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    socket.emit('leave_edit_session', {
+        user_id: userId
+    });
+});
+</script>
+{% endblock %}

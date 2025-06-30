@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Q&A System - AI-Powered Question Answering{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="row mb-5">
+    <div class="col-12 text-center">
+        <div class="py-5">
+            <h1 class="display-4 fw-bold text-primary mb-3">
+                <i data-feather="help-circle" class="me-3"></i>
+                AI-Powered Q&A System
+            </h1>
+            <p class="lead text-muted mb-4">
+                Get instant, intelligent answers to your questions using advanced NLP and machine learning technology.
+            </p>
+            <a href="{{ url_for('ask_question') }}" class="btn btn-primary btn-lg">
+                <i data-feather="message-circle" class="me-2"></i>
+                Ask a Question
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h2 class="text-center mb-4">How It Works</h2>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i data-feather="edit" width="48" height="48" class="text-primary"></i>
+                </div>
+                <h5 class="card-title">1. Ask Your Question</h5>
+                <p class="card-text">
+                    Type your question in natural language. Our system understands context and intent.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i data-feather="cpu" width="48" height="48" class="text-success"></i>
+                </div>
+                <h5 class="card-title">2. AI Processing</h5>
+                <p class="card-text">
+                    Advanced NLP algorithms analyze your question and match it with relevant content using semantic similarity.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <div class="mb-3">
+                    <i data-feather="target" width="48" height="48" class="text-info"></i>
+                </div>
+                <h5 class="card-title">3. Get Ranked Answers</h5>
+                <p class="card-text">
+                    Receive multiple answers ranked by relevance and confidence score for the best possible response.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Key Features -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h2 class="text-center mb-4">Key Features</h2>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="row">
+            <div class="col-2">
+                <i data-feather="brain" width="32" height="32" class="text-primary"></i>
+            </div>
+            <div class="col-10">
+                <h5>Natural Language Processing</h5>
+                <p class="text-muted">
+                    Powered by spaCy for advanced text understanding and semantic analysis.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="row">
+            <div class="col-2">
+                <i data-feather="layers" width="32" height="32" class="text-success"></i>
+            </div>
+            <div class="col-10">
+                <h5>ML-Based Ranking</h5>
+                <p class="text-muted">
+                    Uses TF-IDF and cosine similarity to rank answers by relevance.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="row">
+            <div class="col-2">
+                <i data-feather="folder" width="32" height="32" class="text-info"></i>
+            </div>
+            <div class="col-10">
+                <h5>Organized Content</h5>
+                <p class="text-muted">
+                    Content is organized by categories for better context and accuracy.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="row">
+            <div class="col-2">
+                <i data-feather="trending-up" width="32" height="32" class="text-warning"></i>
+            </div>
+            <div class="col-10">
+                <h5>Analytics & Insights</h5>
+                <p class="text-muted">
+                    Track question patterns and system performance with detailed analytics.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center py-5">
+                <h3 class="card-title">Ready to Get Started?</h3>
+                <p class="card-text lead">
+                    Ask your first question and experience the power of AI-driven answers.
+                </p>
+                <div class="mt-4">
+                    <a href="{{ url_for('ask_question') }}" class="btn btn-light btn-lg me-3">
+                        <i data-feather="message-circle" class="me-2"></i>
+                        Ask a Question
+                    </a>
+                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-lg">
+                        <i data-feather="settings" class="me-2"></i>
+                        Admin Panel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

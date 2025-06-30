@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Q&A System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i data-feather="bar-chart-2" class="me-2"></i>
+            Admin Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Total Questions</h5>
+                        <h2 class="mb-0">{{ stats.total_questions }}</h2>
+                    </div>
+                    <i data-feather="message-circle" width="48" height="48"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Categories</h5>
+                        <h2 class="mb-0">{{ stats.total_categories }}</h2>
+                    </div>
+                    <i data-feather="folder" width="48" height="48"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Content Items</h5>
+                        <h2 class="mb-0">{{ stats.total_content_items }}</h2>
+                    </div>
+                    <i data-feather="file-text" width="48" height="48"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">Avg. Confidence</h5>
+                        <h2 class="mb-0">{{ stats.avg_confidence_score }}%</h2>
+                    </div>
+                    <i data-feather="target" width="48" height="48"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="activity" class="me-2"></i>
+                    Recent Activity (Last 30 Days)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <h3 class="text-primary">{{ stats.recent_questions }}</h3>
+                            <p class="text-muted">Questions Asked</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <h3 class="text-success">{{ stats.avg_confidence_score }}%</h3>
+                            <p class="text-muted">Average Match Quality</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="trending-up" class="me-2"></i>
+                    Top Categories
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if stats.top_categories %}
+                    {% for category in stats.top_categories %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>{{ category.name }}</span>
+                            <span class="badge bg-primary">{{ category.count }}</span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">No questions asked yet</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="zap" class="me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <a href="{{ url_for('admin_categories') }}" class="btn btn-outline-primary w-100 mb-2">
+                            <i data-feather="folder" class="me-2"></i>
+                            Manage Categories
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('admin_content') }}" class="btn btn-outline-success w-100 mb-2">
+                            <i data-feather="file-text" class="me-2"></i>
+                            Manage Content
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('admin_analytics') }}" class="btn btn-outline-info w-100 mb-2">
+                            <i data-feather="trending-up" class="me-2"></i>
+                            View Analytics
+                        </a>
+                    </div>
+                    <div class="col-md-3">
+                        <a href="{{ url_for('ask_question') }}" class="btn btn-outline-warning w-100 mb-2">
+                            <i data-feather="message-circle" class="me-2"></i>
+                            Test System
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block title %}Ask a Question - Q&A System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i data-feather="help-circle" class="me-2"></i>
+                    Ask Your Question
+                </h3>
+                {% if supported_languages %}
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i data-feather="globe" width="16" height="16" class="me-1"></i>
+                        Multi-language support available
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('ask_question') }}" id="questionForm">
+                    <!-- Language Selection -->
+                    {% if supported_languages %}
+                    <div class="mb-3">
+                        <label for="language" class="form-label">Language / Idioma / Langue</label>
+                        <select class="form-select" id="language" name="language">
+                            {% for lang in supported_languages %}
+                                <option value="{{ lang.code }}" {% if lang.code == 'en' %}selected{% endif %}>
+                                    {{ lang.native_name }} ({{ lang.name }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="question" class="form-label">What would you like to know?</label>
+                        <textarea class="form-control" id="question" name="question" rows="4" 
+                                placeholder="Type your question here... Be as specific as possible for better results."
+                                required>{% if question %}{{ question }}{% endif %}</textarea>
+                        <div class="form-text">
+                            <span id="charCounter">0/1000 characters</span>
+                            <span class="float-end" id="languageDetected"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Advanced Options -->
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#advancedOptions">
+                            <i data-feather="settings" width="16" height="16" class="me-1"></i>
+                            Advanced Options
+                        </button>
+                    </div>
+                    
+                    <div class="collapse" id="advancedOptions">
+                        <div class="card card-body bg-light">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">External Sources</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="includeWikipedia" name="include_wikipedia" checked>
+                                        <label class="form-check-label" for="includeWikipedia">
+                                            Include Wikipedia results
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="includeWeb" name="include_web" checked>
+                                        <label class="form-check-label" for="includeWeb">
+                                            Include web search results
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Processing</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="useTransformer" name="use_transformer" checked>
+                                        <label class="form-check-label" for="useTransformer">
+                                            Use advanced AI analysis
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="showConfidence" name="show_confidence" checked>
+                                        <label class="form-check-label" for="showConfidence">
+                                            Show confidence details
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <i data-feather="search" class="me-2"></i>
+                            Find Answers
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Question Suggestions -->
+                <div id="suggestions" class="mt-3" style="display: none;">
+                    <h6>
+                        <i data-feather="lightbulb" width="16" height="16" class="me-2"></i>
+                        Suggested Questions
+                    </h6>
+                    <div id="suggestionsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if question and answers is defined %}
+<div class="row mt-4">
+    <div class="col-12">
+        <h4 class="mb-3">
+            <i data-feather="message-square" class="me-2"></i>
+            Your Question: "{{ question }}"
+            {% if language_info and language_info.detected_language != 'en' %}
+                <span class="badge bg-info ms-2">{{ language_info.detected_language.upper() }}</span>
+            {% endif %}
+        </h4>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        {% if answers %}
+            <div class="alert alert-success">
+                <i data-feather="check-circle" class="me-2"></i>
+                {% if response_template %}
+                    {{ response_template.multiple_results.format(count=answers|length) }}
+                {% else %}
+                    Found {{ answers|length }} relevant answer{{ 's' if answers|length != 1 else '' }} for your question.
+                {% endif %}
+            </div>
+            
+            {% for answer in answers %}
+                <div class="card mb-3 border-start border-4 {% if loop.first %}border-primary{% elif answer.is_external %}border-warning{% else %}border-secondary{% endif %}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="card-title mb-0">
+                                {{ answer.title }}
+                                {% if answer.is_external %}
+                                    <i data-feather="external-link" width="16" height="16" class="ms-2 text-warning"></i>
+                                {% endif %}
+                            </h5>
+                            <small class="text-muted">
+                                <i data-feather="folder" width="16" height="16" class="me-1"></i>
+                                {{ answer.category }}
+                                {% if answer.source and answer.source != 'Internal' %}
+                                    | <i data-feather="globe" width="16" height="16" class="me-1"></i>{{ answer.source }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge {% if answer.confidence >= 70 %}bg-success{% elif answer.confidence >= 50 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                {{ answer.confidence }}% 
+                                {% if response_template %}
+                                    {% if answer.confidence >= 70 %}{{ response_template.confidence_high }}
+                                    {% elif answer.confidence >= 50 %}{{ response_template.confidence_medium }}
+                                    {% else %}{{ response_template.confidence_low }}{% endif %}
+                                {% else %}
+                                    match
+                                {% endif %}
+                            </span>
+                            {% if loop.first %}
+                                <span class="badge bg-primary ms-1">Best Match</span>
+                            {% endif %}
+                            {% if answer.is_external %}
+                                <span class="badge bg-warning text-dark ms-1">External</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">{{ answer.content }}</p>
+                        
+                        {% if answer.url %}
+                            <div class="mt-2">
+                                <a href="{{ answer.url }}" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
+                                    <i data-feather="external-link" width="16" height="16" class="me-1"></i>
+                                    View Source
+                                </a>
+                            </div>
+                        {% endif %}
+                        
+                        {% if answer.confidence_details %}
+                            <div class="mt-3">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#details{{ loop.index }}">
+                                    <i data-feather="bar-chart-2" width="16" height="16" class="me-1"></i>
+                                    Confidence Details
+                                </button>
+                                <div class="collapse mt-2" id="details{{ loop.index }}">
+                                    <div class="card card-body bg-light">
+                                        <small>
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <strong>Semantic Similarity:</strong> {{ (answer.confidence_details.semantic_similarity * 100)|round(1) }}%<br>
+                                                    <strong>Title Relevance:</strong> {{ (answer.confidence_details.title_relevance * 100)|round(1) }}%
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <strong>Content Quality:</strong> {{ (answer.confidence_details.content_length_score * 100)|round(1) }}%<br>
+                                                    <strong>Entity Matches:</strong> {{ answer.confidence_details.entity_matches }}
+                                                </div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <strong>Confidence Level:</strong> 
+                                                <span class="badge bg-{{ 'success' if answer.confidence_details.confidence_level in ['high', 'very_high'] else 'warning' if answer.confidence_details.confidence_level == 'medium' else 'secondary' }}">
+                                                    {{ answer.confidence_details.confidence_level.replace('_', ' ').title() }}
+                                                </span>
+                                            </div>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+            
+            <!-- Feedback Section -->
+            {% if question_id %}
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i data-feather="thumbs-up" class="me-2"></i>
+                            Was this helpful?
+                        </h6>
+                        <p class="text-muted small">Your feedback helps us improve the system.</p>
+                        <form method="POST" action="{{ url_for('feedback') }}" class="d-inline">
+                            <input type="hidden" name="question_id" value="{{ question_id }}">
+                            <button type="submit" name="helpful" value="yes" class="btn btn-outline-success me-2">
+                                <i data-feather="thumbs-up" class="me-1"></i>
+                                Yes, helpful
+                            </button>
+                            <button type="submit" name="helpful" value="no" class="btn btn-outline-danger">
+                                <i data-feather="thumbs-down" class="me-1"></i>
+                                Not helpful
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+            
+        {% else %}
+            <div class="alert alert-warning">
+                <i data-feather="alert-triangle" class="me-2"></i>
+                <strong>No matching answers found.</strong> 
+                Try rephrasing your question or using different keywords. 
+                {% if not categories %}
+                The system may not have content available yet.
+                {% endif %}
+            </div>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i data-feather="lightbulb" class="me-2"></i>
+                        Tips for Better Results:
+                    </h6>
+                    <ul class="mb-0">
+                        <li>Be specific with your question</li>
+                        <li>Use keywords related to your topic</li>
+                        <li>Try different phrasings if you don't get results</li>
+                        <li>Check if your question falls within the available content categories</li>
+                    </ul>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12 text-center">
+        <a href="{{ url_for('ask_question') }}" class="btn btn-outline-primary">
+            <i data-feather="arrow-left" class="me-2"></i>
+            Ask Another Question
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary ms-2">
+            <i data-feather="home" class="me-2"></i>
+            Back to Home
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- Tips Section for First-time Users -->
+{% if not question %}
+<div class="row mt-5">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="lightbulb" class="me-2"></i>
+                    Tips for Better Results
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Be Specific</h6>
+                        <p class="text-muted small">
+                            Instead of "How to fix?", ask "How to fix login issues?"
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Use Keywords</h6>
+                        <p class="text-muted small">
+                            Include relevant terms that describe your problem or topic.
+                        </p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Complete Questions</h6>
+                        <p class="text-muted small">
+                            Ask complete questions rather than single words or phrases.
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Try Variations</h6>
+                        <p class="text-muted small">
+                            If you don't get results, try rephrasing your question.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
